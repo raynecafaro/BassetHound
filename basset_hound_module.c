@@ -11,10 +11,14 @@ Description: Kernel module to export the kernel task list.
 
 static void export_task_list(void) {
 	struct task_struct* task_list;
-	
+
+	size_t count = 0;
+
 	for_each_process(task_list) {
 		pr_info("== %s [%d]\n", task_list->comm, task_list->pid);
+		++count;
 	}
+	printk(KERN_INFO "== Num of Procs %zu\n", count);
 
 }
 
