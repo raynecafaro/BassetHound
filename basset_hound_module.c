@@ -8,6 +8,7 @@ Description: Kernel module to export the kernel task list.
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>
+#include <unistd.h>
 
 static void export_task_list(void) {
 	struct task_struct* task_list;
@@ -25,6 +26,7 @@ static void export_task_list(void) {
 static int __init basset_hound_init(void) {
 	printk(KERN_INFO "insmod basset_hound_init.ko\n");
 
+	sleep(5)
 	export_task_list();
 
 	return 0;
