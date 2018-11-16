@@ -25,7 +25,7 @@ The included kernel header files:
 #include <linux/sched.h>	                // for_each_process, pr_info
 ```
 
-The following commands will install the kernel headers that are necessary for compiliation.__
+The following commands will install the kernel headers that are necessary for compiliation.  
 Ubuntu/Debian:
 ```
 apt-get install build-essential linux-headers-`uname -r`
