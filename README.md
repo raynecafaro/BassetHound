@@ -29,8 +29,7 @@ The necessary kernel headers:
 apt-get install build-essential linux-headers-`uname -r`
 ```
 
-- Passing of Flags
-By default, Python looks for the Linux Kernel Module in the current directory where BassetHound is being run. Therefore, in order to remedy this issue the flag "-lkm" must be passed.
+- By default, Python looks for the Linux Kernel Module in the current directory where BassetHound is being run. Therefore, in order to remedy this issue the flag "-lkm" must be passed.
 
 ```
 Python3 basset_hound.py -lkm /Path/To/basset_hound_module.ko
