@@ -16,7 +16,7 @@ Description: Kernel module to export the kernel task list and count of
  *
  */
 static void export_task_list(void) {
-	struct task_struct* task_list;                                          // Data struct describes processes in a system.
+	struct task_struct* task_list;                                          // Data struct describes processes in a system
 
 	size_t count = 0;                                                       // Count of processes
 
