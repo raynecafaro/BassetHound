@@ -16,15 +16,15 @@ Description: Kernel module to export the kernel task list and count of
  *
  */
 static void export_task_list(void) {
-	struct task_struct* task_list;          // 
+	struct task_struct* task_list;          // data struct describes processes
 
 	size_t count = 0;                       // Count of processes
 
 	for_each_process(task_list) {
-		pr_info("== %s [%d]\n", task_list->comm, task_list->pid);    // output list of current process and its PID
+		pr_info("== %s [%d]\n", task_list->comm, task_list->pid);    // Output list of current process and its PID
 		++count;                        // Incremment count
 	}
-	printk(KERN_INFO "== Num of Procs %zu\n", count);    // output count of processes to kernel
+	printk(KERN_INFO "== Num of Procs %zu\n", count);    // Output count of processes to kernel
 
 }
 
