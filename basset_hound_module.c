@@ -32,7 +32,7 @@ static void export_task_list(void) {
  *
  */
 static int __init basset_hound_init(void) {
-	printk(KERN_INFO "insmod basset_hound_init.ko\n");    // Output to kernel
+	printk(KERN_INFO "insmod basset_hound_init.ko\n");    // Output to kernel initialize message
 
 	export_task_list();             // Call to output processes in Kernel
                                         // Ring Buffer.
@@ -44,7 +44,7 @@ static int __init basset_hound_init(void) {
  *
  */
 static void __exit basset_hound_exit(void) {
-	printk(KERN_INFO "rmmod basset_hound_init.ko\n");    // Output to kernel
+	printk(KERN_INFO "rmmod basset_hound_init.ko\n");    // Output to kernel removal message
 }
 
 
