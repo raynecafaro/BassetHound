@@ -2,12 +2,15 @@
 A Linux kernel module and userland utility pair to detect hidden processes.
 
 ## Loading the Kernel Module Separately
-The kernel module exports the kernel task list from kernel space to user space via dmesg. The task list is a linked list of task_structs are the linux kernel representation of processes.
+The kernel module exports the kernel task list from kernel space to user space via dmesg. The task list is a linked list of task_structs which are the linux kernel representation of processes.
+
+The following commands can be used to load and subsequently remove the kernel module independently from basset_hound.py. However, this is uncessary, because basset_hound.py automatically loads the kernel module.
 
 ```
-insmod basset_hound_module.ko
-lsmod | grep basset 
-rmmod basset_hound_module.ko
+insmod basset_hound_module.ko # Inserts the kernel module
+lsmod | grep basset # Verifies the module module is inserted
+dmesg # Displays the kernel module output
+rmmod basset_hound_module.ko # Removes the kernel module
 ```
 
 ## Requirements
