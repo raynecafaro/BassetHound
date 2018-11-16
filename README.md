@@ -23,7 +23,7 @@ The necessary kernel headers:
 
 ### To Run
 - Python3
-- Compiled KO : The command below will install the kernel headers needed
+- Compiled KO : The command below will install the kernel headers that are needed
 
 ```
 apt-get install build-essential linux-headers-`uname -r`
