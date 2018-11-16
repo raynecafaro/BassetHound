@@ -2,8 +2,7 @@
 Project: BassetHound
 File: basset_hound_module.c
 Author: Rayne Cafaro and Jonathan Jang
-Description: Kernel module to export the kernel task list and count of
-             number of processes.
+Description: Kernel module to export the kernel task list and count of number of processes.
 */
 
 #include <linux/init.h>                         // Needed for Linux Kernel Dev
