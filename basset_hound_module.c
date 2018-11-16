@@ -24,7 +24,7 @@ static void export_task_list(void) {
 		++count;                                                        // Incremment count
 	}
 
-printk(KERN_INFO "== Basset_Count %zu\n", count);                       // Output count of processes to kernel
+	printk(KERN_INFO "== Basset_Count %zu\n", count);                       // Output count of processes to kernel
 
 }
 
