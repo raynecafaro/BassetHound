@@ -7,10 +7,10 @@ The kernel module exports the kernel task list from kernel space to user space v
 The following commands can be used to load and subsequently remove the kernel module independently from basset_hound.py. However, this is uncessary, because basset_hound.py automatically loads and unloads the kernel module.
 
 ```
-insmod basset_hound_module.ko # Inserts the kernel module
-lsmod | grep basset # Verifies the kernel module is inserted
-dmesg # Displays the kernel module output
-rmmod basset_hound_module.ko # Removes the kernel module
+insmod basset_hound_module.ko              # Inserts the kernel module
+lsmod | grep basset                        # Verifies the kernel module is inserted
+dmesg                                      # Displays the kernel module output
+rmmod basset_hound_module.ko               # Removes the kernel module
 ```
 
 ## Requirements
