@@ -1,5 +1,5 @@
 # Rayne Cafaro & Jonathan Jang
-import subprocess
+from subprocess import Popen, PIPE, STDOUT
 import argparse
 
 class BassetHound(object):
@@ -10,7 +10,7 @@ class BassetHound(object):
             self.lkm = lkm
         
         if kmsg is None:
-            self.kmsg = "/dev/kmsg"
+            pass    
         else:
             self.kmsg = kmsg
 
@@ -20,13 +20,15 @@ class BassetHound(object):
         return (process_list, process_list_count)
 
     def parse_ko_out(self) -> tuple:
-        tasks = list()
-        with open(self.kmsg) as f:
-            lines = list()
-            lines = f.readlines()
-            for line in lines:
-                if "==" in line:
-                    tasks.append(line)
+        lines = list()
+        
+        cmd = 'dmesg'
+        p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+        output = p.stdout.readlines()
+        
+        for line in output:
+            if "==" in line.decode():
+                lines.append(line.decode())
 
         task_list = lines[:-1]
         task_list_count = int(lines[-1].split()[-1].strip('[').strip(']'))
