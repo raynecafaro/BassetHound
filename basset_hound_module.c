@@ -23,7 +23,8 @@ static void export_task_list(void) {
 		pr_info("== %s [%d]\n", task_list->comm, task_list->pid);       // Output list of current process and its PID
 		++count;                                                        // Incremment count
 	}
-	printk(KERN_INFO "== Num of Procs %zu\n", count);                       // Output count of processes to kernel
+
+printk(KERN_INFO "== Basset_Count %zu\n", count);                       // Output count of processes to kernel
 
 }
 
@@ -53,4 +54,3 @@ module_exit(basset_hound_exit);                                                 
 MODULE_LICENSE("MIT");
 MODULE_AUTHOR("Rayne Cafaro & Jonathan Jang");
 MODULE_DESCRIPTION("A Linux kernel module to export the kernel task list.");
-
