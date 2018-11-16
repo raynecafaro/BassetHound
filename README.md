@@ -1,5 +1,5 @@
 # BassetHound
-A Linux kernel module and userland utility pair to detect Linux kernel module (LKM) rootkits. Paired with a Python script, BassetHound outputs detected rootkits to a output file.
+A Linux kernel module and userland utility pair to detect Linux kernel module (LKM) rootkits. Paired with a Python script, BassetHound outputs detected hidden processes which indicates of the possiblity of rootkits.
 
 ## Running the Kernel Module Separately
 
