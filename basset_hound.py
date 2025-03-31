@@ -46,7 +46,7 @@ class BassetHound(object):
         for line in output:
             if "==" in line.decode():
                 lines.append(line.decode())
-        if len(lines) is 0:
+        if len(lines) == 0:
             print("The kernel module does not appear to have loaded.")
             sys.exit(1)
 
@@ -54,7 +54,7 @@ class BassetHound(object):
         task_list = lines[:-1]
         task_list_count = int(lines[-1].split()[-1].strip('[]'))
 
-        if len(task_list) is not task_list_count:
+        if len(task_list) != task_list_count:
             print("ALERT: The dmesg task list count does not match exported task list.")
    
         return (task_list, task_list_count)
@@ -63,7 +63,7 @@ class BassetHound(object):
         process_id_list, process_id_list_count = self.parse_ps()
         task_list, task_list_count = self.parse_ko_out()
 
-        if process_id_list_count is not task_list_count:
+        if process_id_list_count != task_list_count:
             for task in task_list:
                 stripped_task = int(task.split()[-1].strip('[]'))
                 if stripped_task not in process_id_list:
@@ -85,7 +85,7 @@ class BassetHound(object):
                     print("Hidden process: " + task)
                     
             
-            if process_id_list_count is not task_list_count:
+            if process_id_list_count != task_list_count:
                 print("ALERT: Hidden process indicates a potential rootkit.\n")
             else:
                 print("No hidden processes detected.\n")
