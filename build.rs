@@ -16,7 +16,7 @@ fn main() {
     } else {
         // If the BPF object has not been built (e.g. on systems without BTF support),
         // write an empty file so that Cargo can compile userland successfully.
-        if let Err(e) = fs::write(&dest_path, &[]) {
+        if let Err(e) = fs::write(&dest_path, []) {
             panic!("Failed to write dummy BPF object to OUT_DIR: {}", e);
         }
     }
