@@ -40,9 +40,16 @@ jobs:
           autoreconf -fi
           CC=musl-gcc ./configure --host=x86_64-linux-musl --prefix=/tmp/musl-argp
           make -j$(nproc)
-          mkdir -p /tmp/musl-argp/lib /tmp/musl-argp/include
-          cp libargp.a /tmp/musl-argp/lib/
-          cp argp.h /tmp/musl-argp/include/
+          make install
+
+      - name: Build musl-obstack for musl
+        run: |
+          git clone --depth=1 https://github.com/void-linux/musl-obstack.git /tmp/musl-obstack
+          cd /tmp/musl-obstack
+          autoreconf -fi
+          CC=musl-gcc ./configure --host=x86_64-linux-musl --prefix=/tmp/musl-argp
+          make -j$(nproc)
+          make install
 
       - name: Cache cargo registry & build
         uses: actions/cache@v4
