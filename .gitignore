@@ -1,1 +1,15 @@
 .venv
+/target
+
+# Kernel module build artifacts
+*.ko
+*.mod
+*.mod.c
+*.o
+*.o.d
+*~
+modules.order
+Module.symvers
+.tmp_versions/
+.*.cmd
+/bpf/vmlinux.h

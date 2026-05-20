@@ -1,56 +1,122 @@
 /*
 Project: BassetHound
 File: basset_hound_module.c
-Author: Rayne Cafaro and Jonathan Jang
-Description: Kernel module to export the kernel task list and count of number of processes.
+Author: Rayne Cafaro and Jonathan Jang (Modernized by Antigravity)
+Description: Kernel module to export the kernel task list using Netlink sockets.
 */
 
-#include <linux/init.h>                         // Needed for Linux Kernel Dev
-#include <linux/module.h>                       // Needed for Linux Kernel Dev
-#include <linux/kernel.h>	                // KERN_INFO
-#include <linux/sched.h>	                // for_each_process, pr_info
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/sched.h>
+#include <linux/version.h>
+#include <linux/skbuff.h>
+#include <linux/slab.h>
+#include <net/sock.h>
+#include <net/netlink.h>
 
-/* @brief Output the tasklist. The fuction export_task_list gets the count of
- *        processes and lists each process to the kernel ring buffer.
- *
- */
-static void export_task_list(void) {
-	struct task_struct* task_list;                                          // Data struct describes processes in a system
+#define NETLINK_BASSET 31
 
-	size_t count = 0;                                                       // Count of processes
+static struct sock *nl_sock = NULL;
 
-	for_each_process(task_list) {
-		pr_info("== %s [%d]\n", task_list->comm, task_list->pid);       // Output list of current process and its PID
-		++count;                                                        // Incremment count
-	}
+static void send_chunk(int pid, const char *data, size_t len, bool done) {
+    struct sk_buff *skb_out;
+    struct nlmsghdr *nlh;
+    int res;
 
-	printk(KERN_INFO "== Basset_Count %zu\n", count);                       // Output count of processes to kernel
+    if (len == 0 && !done) return;
 
+    skb_out = nlmsg_new(len, GFP_KERNEL);
+    if (!skb_out) {
+        pr_err("basset_hound: failed to allocate new skb\n");
+        return;
+    }
+
+    nlh = nlmsg_put(skb_out, 0, 0, done ? NLMSG_DONE : 0, len, 0);
+    if (!nlh) {
+        pr_err("basset_hound: nlmsg_put failed\n");
+        nlmsg_free(skb_out);
+        return;
+    }
+
+    NETLINK_CB(skb_out).dst_group = 0; /* not in mcast group */
+    if (len > 0) {
+        memcpy(nlmsg_data(nlh), data, len);
+    }
+
+    res = nlmsg_unicast(nl_sock, skb_out, pid);
+    if (res < 0) {
+        pr_debug("basset_hound: error sending message to user: %d\n", res);
+    }
 }
 
-/* @brief Initializes the BassetHound module into the Linux Kernel.
- *
- */
+static void basset_hound_nl_recv_msg(struct sk_buff *skb) {
+    struct nlmsghdr *nlh;
+    int pid;
+    struct task_struct *task;
+    char *buf;
+    size_t buf_len = 0;
+    size_t max_buf = 16384; // 16KB buffer to pack processes
+
+    nlh = (struct nlmsghdr *)skb->data;
+    pid = nlh->nlmsg_pid; // PID of user space process
+
+    buf = kmalloc(max_buf, GFP_KERNEL);
+    if (!buf) {
+        pr_err("basset_hound: failed to allocate memory\n");
+        return;
+    }
+
+    rcu_read_lock();
+    for_each_process(task) {
+        char line[256];
+        int len = snprintf(line, sizeof(line), "%d\t%s\n", task->pid, task->comm);
+        if (len > 0) {
+            if (buf_len + len < max_buf - 1) {
+                memcpy(buf + buf_len, line, len);
+                buf_len += len;
+            } else {
+                rcu_read_unlock();
+                send_chunk(pid, buf, buf_len, false);
+                buf_len = 0;
+                rcu_read_lock();
+                memcpy(buf + buf_len, line, len);
+                buf_len += len;
+            }
+        }
+    }
+    rcu_read_unlock();
+
+    send_chunk(pid, buf, buf_len, true);
+    kfree(buf);
+}
+
 static int __init basset_hound_init(void) {
-	printk(KERN_INFO "insmod basset_hound_init.ko\n");                      // Output to kernel initialize message
+    struct netlink_kernel_cfg cfg = {
+        .input = basset_hound_nl_recv_msg,
+    };
 
-	export_task_list();                                                     // Call to output processes in Kernel
-                                                                                // Ring Buffer.
+    pr_info("basset_hound: initializing module via netlink\n");
 
-	return 0;
+    nl_sock = netlink_kernel_create(&init_net, NETLINK_BASSET, &cfg);
+    if (!nl_sock) {
+        pr_err("basset_hound: error creating netlink socket\n");
+        return -ENOMEM;
+    }
+
+    return 0;
 }
 
-/* @brief Removes the BassetHound module from the Linux Kernel.
- *
- */
 static void __exit basset_hound_exit(void) {
-	printk(KERN_INFO "rmmod basset_hound_init.ko\n");                       // Output to kernel removal message
+    pr_info("basset_hound: removing module\n");
+    if (nl_sock) {
+        netlink_kernel_release(nl_sock);
+    }
 }
 
-
-module_init(basset_hound_init);                                                 // Initializes the BassetHound Module
-module_exit(basset_hound_exit);                                                 // Removes the BassetHound Module
+module_init(basset_hound_init);
+module_exit(basset_hound_exit);
 
 MODULE_LICENSE("MIT");
 MODULE_AUTHOR("Rayne Cafaro & Jonathan Jang");
-MODULE_DESCRIPTION("A Linux kernel module to export the kernel task list.");
+MODULE_DESCRIPTION("A Linux kernel module to export the kernel task list via Netlink.");

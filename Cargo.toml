@@ -1,0 +1,10 @@
+[package]
+name = "basset_hound"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+nix = { version = "0.31", features = ["signal", "sched", "process", "fs", "user"] }
+libc = "0.2"
+libbpf-rs = "0.23"
