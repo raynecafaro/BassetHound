@@ -24,6 +24,12 @@ jobs:
         with:
           components: clippy, rustfmt
 
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libelf-dev zlib1g-dev
+
+
       - name: Cache cargo registry & build
         uses: actions/cache@v4
         with:
@@ -62,7 +68,9 @@ jobs:
       - name: Install kernel headers
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential linux-headers-$(uname -r)
+          sudo apt-get install -y build-essential
+          # Attempt to install headers for the running kernel, with fallback to the Azure meta-package
+          sudo apt-get install -y linux-headers-$(uname -r) || sudo apt-get install -y linux-headers-azure || true
 
       - name: Build kernel module
         run: make lkm
@@ -79,23 +87,23 @@ jobs:
       - name: Install eBPF build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang llvm libbpf-dev linux-tools-common
-          # bpftool is a BUILD-TIME-ONLY dependency used solely to generate vmlinux.h
-          # from the running kernel's BTF data. It is NOT used at runtime — the Rust
-          # binary loads and links the BPF bytecode natively via libbpf-rs.
-          # GitHub runners use Azure kernels, so install linux-tools-azure meta-package.
-          sudo apt-get install -y linux-tools-azure || sudo apt-get install -y linux-tools-$(uname -r) || true
+          # Install clang, llvm, libbpf-dev, and standalone bpftool package
+          sudo apt-get install -y clang llvm libbpf-dev bpftool
 
       - name: Generate vmlinux.h
         run: |
           mkdir -p bpf
-          # Locate bpftool: check PATH first, then linux-tools versioned path
+          # Check PATH first, then linux-tools fallback path
           if command -v bpftool &>/dev/null; then
             BPFTOOL=bpftool
           elif [ -x "/usr/lib/linux-tools/$(uname -r)/bpftool" ]; then
             BPFTOOL="/usr/lib/linux-tools/$(uname -r)/bpftool"
           else
-            echo "Error: bpftool not found" && exit 1
+            # Try to locate any other bpftool binary
+            BPFTOOL=$(find /usr -name bpftool -type f -executable -print -quit 2>/dev/null || echo "")
+            if [ -z "$BPFTOOL" ]; then
+              echo "Error: bpftool not found" && exit 1
+            fi
           fi
           sudo $BPFTOOL btf dump file /sys/kernel/btf/vmlinux format c > bpf/vmlinux.h
 
