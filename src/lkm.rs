@@ -1,4 +1,3 @@
-use libc;
 use std::collections::HashMap;
 
 /// Query the Linux Kernel Module via custom Netlink socket
@@ -116,10 +115,10 @@ pub fn query_lkm() -> Result<HashMap<i32, String>, String> {
 fn parse_proc_list(text: &str, processes: &mut HashMap<i32, String>) {
     for line in text.lines() {
         let parts: Vec<&str> = line.splitn(2, '\t').collect();
-        if parts.len() == 2 {
-            if let Ok(pid) = parts[0].parse::<i32>() {
-                processes.insert(pid, parts[1].to_string());
-            }
+        if parts.len() == 2
+            && let Ok(pid) = parts[0].parse::<i32>()
+        {
+            processes.insert(pid, parts[1].to_string());
         }
     }
 }

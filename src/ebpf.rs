@@ -15,7 +15,7 @@ pub fn query_ebpf() -> Result<HashMap<i32, String>, String> {
         .open_memory(BPF_BYTES)
         .map_err(|e| format!("Failed to open BPF object from memory: {}", e))?;
 
-    let mut loaded = obj
+    let loaded = obj
         .load()
         .map_err(|e| format!("Failed to load BPF program into kernel: {}", e))?;
 
@@ -38,10 +38,10 @@ pub fn query_ebpf() -> Result<HashMap<i32, String>, String> {
     let mut processes = HashMap::new();
     for line in content.lines() {
         let parts: Vec<&str> = line.splitn(2, '\t').collect();
-        if parts.len() == 2 {
-            if let Ok(pid) = parts[0].parse::<i32>() {
-                processes.insert(pid, parts[1].to_string());
-            }
+        if parts.len() == 2
+            && let Ok(pid) = parts[0].parse::<i32>()
+        {
+            processes.insert(pid, parts[1].to_string());
         }
     }
 

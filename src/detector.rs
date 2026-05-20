@@ -52,7 +52,7 @@ pub fn probe_pid_syscalls(pid: i32) -> bool {
 /// Run ps command and parse PIDs and names
 pub fn scan_ps_command() -> Result<HashMap<i32, String>, String> {
     let output = Command::new("ps")
-        .args(&["-e", "-o", "pid,comm"])
+        .args(["-e", "-o", "pid,comm"])
         .output()
         .map_err(|e| format!("Failed to execute ps command: {}", e))?;
 
@@ -67,11 +67,11 @@ pub fn scan_ps_command() -> Result<HashMap<i32, String>, String> {
     let mut pids = HashMap::new();
     for line in text.lines().skip(1) {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() >= 2 {
-            if let Ok(pid) = parts[0].parse::<i32>() {
-                let comm = parts[1..].join(" ");
-                pids.insert(pid, comm);
-            }
+        if parts.len() >= 2
+            && let Ok(pid) = parts[0].parse::<i32>()
+        {
+            let comm = parts[1..].join(" ");
+            pids.insert(pid, comm);
         }
     }
     Ok(pids)
@@ -215,11 +215,8 @@ pub fn analyze_results(results: &ScanResults) -> DetectionReport {
         let in_direct = results.proc_direct.contains(&pid);
         let in_syscalls = results.syscalls.contains(&pid);
         let in_ps = results.ps_cmds.contains_key(&pid);
-        let in_lkm = results.lkm.as_ref().map_or(false, |m| m.contains_key(&pid));
-        let in_ebpf = results
-            .ebpf
-            .as_ref()
-            .map_or(false, |m| m.contains_key(&pid));
+        let in_lkm = results.lkm.as_ref().is_some_and(|m| m.contains_key(&pid));
+        let in_ebpf = results.ebpf.as_ref().is_some_and(|m| m.contains_key(&pid));
 
         let mut detected_by = Vec::new();
         let mut hidden_from = Vec::new();
