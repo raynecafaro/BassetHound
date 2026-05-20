@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CC_x86_64_unknown_linux_musl: musl-gcc
 
 jobs:
   # ─────────────────────────────────────────────
@@ -22,12 +23,13 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
+          targets: x86_64-unknown-linux-musl
           components: clippy, rustfmt
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libelf-dev zlib1g-dev build-essential clang llvm libbpf-dev
+          sudo apt-get install -y libelf-dev zlib1g-dev build-essential clang llvm libbpf-dev musl-tools musl-dev
 
       - name: Cache cargo registry & build
         uses: actions/cache@v4
@@ -36,8 +38,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          key: ${{ runner.os }}-cargo-musl-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-musl-
 
       - name: Install bpftool (static)
         run: |
@@ -65,18 +67,18 @@ jobs:
       - name: Check formatting
         run: cargo fmt --check
 
-      - name: Build Rust binary
-        run: cargo build --release
+      - name: Build Rust binary (musl)
+        run: cargo build --target x86_64-unknown-linux-musl --release
 
-      - name: Run clippy
-        run: cargo clippy -- -D warnings
+      - name: Run clippy (musl)
+        run: cargo clippy --target x86_64-unknown-linux-musl -- -D warnings
 
-      - name: Run tests with loaded kernel module and eBPF
+      - name: Run tests with loaded kernel module and eBPF (musl)
         run: |
           # Load the compiled kernel module
           sudo insmod basset_hound_module.ko
-          # Run tests under sudo to allow eBPF loading and LKM netlink queries
-          sudo env "PATH=$PATH" CI=true cargo test
+          # Run tests under sudo with preserved environment variables for rustup/cargo
+          sudo -E env "PATH=$PATH" CI=true cargo test --target x86_64-unknown-linux-musl
           # Unload the module
           sudo rmmod basset_hound_module
 
