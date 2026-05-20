@@ -79,17 +79,28 @@ jobs:
       - name: Install eBPF build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang llvm libbpf-dev linux-tools-common linux-tools-$(uname -r) || true
+          sudo apt-get install -y clang llvm libbpf-dev linux-tools-common
+          # bpftool is a BUILD-TIME-ONLY dependency used solely to generate vmlinux.h
+          # from the running kernel's BTF data. It is NOT used at runtime — the Rust
+          # binary loads and links the BPF bytecode natively via libbpf-rs.
+          # GitHub runners use Azure kernels, so install linux-tools-azure meta-package.
+          sudo apt-get install -y linux-tools-azure || sudo apt-get install -y linux-tools-$(uname -r) || true
 
       - name: Generate vmlinux.h
         run: |
           mkdir -p bpf
-          # Try bpftool from linux-tools, fall back to standalone
-          BPFTOOL=$(command -v bpftool || echo "/usr/lib/linux-tools/$(uname -r)/bpftool")
+          # Locate bpftool: check PATH first, then linux-tools versioned path
+          if command -v bpftool &>/dev/null; then
+            BPFTOOL=bpftool
+          elif [ -x "/usr/lib/linux-tools/$(uname -r)/bpftool" ]; then
+            BPFTOOL="/usr/lib/linux-tools/$(uname -r)/bpftool"
+          else
+            echo "Error: bpftool not found" && exit 1
+          fi
           sudo $BPFTOOL btf dump file /sys/kernel/btf/vmlinux format c > bpf/vmlinux.h
 
       - name: Compile eBPF program
-        run: clang -g -O2 -target bpf -c bpf/basset_hound.bpf.c -o bpf/basset_hound.bpf.o
+        run: clang -g -O2 -target bpf -I bpf/ -c bpf/basset_hound.bpf.c -o bpf/basset_hound.bpf.o
 
   # ─────────────────────────────────────────────
   # Security: audit dependencies for known CVEs

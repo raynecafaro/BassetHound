@@ -27,7 +27,7 @@ bpf/basset_hound.bpf.o: bpf/basset_hound.bpf.c
 		bpftool btf dump file /sys/kernel/btf/vmlinux format c > bpf/vmlinux.h || \
 		(echo "Error: bpftool failed to generate vmlinux.h. Please make sure bpftool is installed." && exit 1); \
 	fi
-	clang -g -O2 -target bpf -c bpf/basset_hound.bpf.c -o bpf/basset_hound.bpf.o
+	clang -g -O2 -target bpf -I bpf/ -c bpf/basset_hound.bpf.c -o bpf/basset_hound.bpf.o
 
 # Clean build artifacts
 clean:

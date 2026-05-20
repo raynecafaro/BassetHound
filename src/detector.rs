@@ -1,11 +1,11 @@
-use std::collections::{HashMap, HashSet};
-use std::process::Command;
-use std::fs;
+use nix::errno::Errno;
+use nix::sched::sched_getscheduler;
 use nix::sys::signal::kill;
 use nix::unistd::Pid;
 use nix::unistd::{getpgid, getsid};
-use nix::errno::Errno;
-use nix::sched::sched_getscheduler;
+use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::process::Command;
 
 /// Probe a PID using multiple non-destructive syscalls (like unhide)
 pub fn probe_pid_syscalls(pid: i32) -> bool {
@@ -15,24 +15,24 @@ pub fn probe_pid_syscalls(pid: i32) -> bool {
     match kill(target_pid, None) {
         Ok(_) => return true,
         Err(Errno::EPERM) => return true, // exists, just no permission
-        Err(Errno::ESRCH) => {},
-        Err(_) => {},
+        Err(Errno::ESRCH) => {}
+        Err(_) => {}
     }
 
     // 2. getpgid(pid) - Get process group ID
     match getpgid(Some(target_pid)) {
         Ok(_) => return true,
         Err(Errno::EPERM) => return true,
-        Err(Errno::ESRCH) => {},
-        Err(_) => {},
+        Err(Errno::ESRCH) => {}
+        Err(_) => {}
     }
 
     // 3. getsid(pid) - Get session ID
     match getsid(Some(target_pid)) {
         Ok(_) => return true,
         Err(Errno::EPERM) => return true,
-        Err(Errno::ESRCH) => {},
-        Err(_) => {},
+        Err(Errno::ESRCH) => {}
+        Err(_) => {}
     }
 
     // 4. sched_getscheduler(pid) - Get scheduler policy
@@ -40,8 +40,8 @@ pub fn probe_pid_syscalls(pid: i32) -> bool {
         match sched_getscheduler(target_pid) {
             Ok(_) => return true,
             Err(Errno::EPERM) => return true,
-            Err(Errno::ESRCH) => {},
-            Err(_) => {},
+            Err(Errno::ESRCH) => {}
+            Err(_) => {}
         }
     }
 
@@ -207,21 +207,48 @@ pub fn analyze_results(results: &ScanResults) -> DetectionReport {
         let in_syscalls = results.syscalls.contains(&pid);
         let in_ps = results.ps_cmds.contains_key(&pid);
         let in_lkm = results.lkm.as_ref().map_or(false, |m| m.contains_key(&pid));
-        let in_ebpf = results.ebpf.as_ref().map_or(false, |m| m.contains_key(&pid));
+        let in_ebpf = results
+            .ebpf
+            .as_ref()
+            .map_or(false, |m| m.contains_key(&pid));
 
         let mut detected_by = Vec::new();
         let mut hidden_from = Vec::new();
 
-        if in_readdir { detected_by.push("proc_readdir".to_string()); } else { hidden_from.push("proc_readdir".to_string()); }
-        if in_direct { detected_by.push("proc_direct".to_string()); } else { hidden_from.push("proc_direct".to_string()); }
-        if in_syscalls { detected_by.push("syscalls".to_string()); } else { hidden_from.push("syscalls".to_string()); }
-        if in_ps { detected_by.push("ps".to_string()); } else { hidden_from.push("ps".to_string()); }
+        if in_readdir {
+            detected_by.push("proc_readdir".to_string());
+        } else {
+            hidden_from.push("proc_readdir".to_string());
+        }
+        if in_direct {
+            detected_by.push("proc_direct".to_string());
+        } else {
+            hidden_from.push("proc_direct".to_string());
+        }
+        if in_syscalls {
+            detected_by.push("syscalls".to_string());
+        } else {
+            hidden_from.push("syscalls".to_string());
+        }
+        if in_ps {
+            detected_by.push("ps".to_string());
+        } else {
+            hidden_from.push("ps".to_string());
+        }
 
         if results.lkm.is_some() {
-            if in_lkm { detected_by.push("lkm".to_string()); } else { hidden_from.push("lkm".to_string()); }
+            if in_lkm {
+                detected_by.push("lkm".to_string());
+            } else {
+                hidden_from.push("lkm".to_string());
+            }
         }
         if results.ebpf.is_some() {
-            if in_ebpf { detected_by.push("ebpf".to_string()); } else { hidden_from.push("ebpf".to_string()); }
+            if in_ebpf {
+                detected_by.push("ebpf".to_string());
+            } else {
+                hidden_from.push("ebpf".to_string());
+            }
         }
 
         // A process is flagged as hidden if it is visible in at least one kernel/syscall check but missing in userland directories or tools.
@@ -245,9 +272,11 @@ pub fn analyze_results(results: &ScanResults) -> DetectionReport {
                 Some(n.clone())
             } else {
                 // Try reading /proc/<pid>/comm or status if it exists
-                Some(std::fs::read_to_string(format!("/proc/{}/comm", pid))
-                    .map(|s| s.trim().to_string())
-                    .unwrap_or_else(|_| "unknown".to_string()))
+                Some(
+                    std::fs::read_to_string(format!("/proc/{}/comm", pid))
+                        .map(|s| s.trim().to_string())
+                        .unwrap_or_else(|_| "unknown".to_string()),
+                )
             };
 
             let name = name.unwrap_or_else(|| "unknown".to_string());
@@ -256,7 +285,8 @@ pub fn analyze_results(results: &ScanResults) -> DetectionReport {
             let description = if !in_readdir && !in_ps && (in_syscalls || in_direct) {
                 "Kernel-level process hiding detected (getdents hook / rootkit)".to_string()
             } else if in_readdir && !in_ps {
-                "Userland utility hijack detected (ps binary modified or LD_PRELOAD hook)".to_string()
+                "Userland utility hijack detected (ps binary modified or LD_PRELOAD hook)"
+                    .to_string()
             } else if !in_readdir && !in_syscalls && (in_lkm || in_ebpf) {
                 "Sophisticated kernel rootkit hiding from standard syscalls but found via kernel traversal".to_string()
             } else {
@@ -320,9 +350,21 @@ mod tests {
         let report = analyze_results(&results);
         assert_eq!(report.hidden_processes.len(), 1);
         assert_eq!(report.hidden_processes[0].pid, 1234);
-        assert!(report.hidden_processes[0].description.contains("Kernel-level process hiding"));
-        assert!(report.hidden_processes[0].hidden_from.contains(&"proc_readdir".to_string()));
-        assert!(report.hidden_processes[0].hidden_from.contains(&"ps".to_string()));
+        assert!(
+            report.hidden_processes[0]
+                .description
+                .contains("Kernel-level process hiding")
+        );
+        assert!(
+            report.hidden_processes[0]
+                .hidden_from
+                .contains(&"proc_readdir".to_string())
+        );
+        assert!(
+            report.hidden_processes[0]
+                .hidden_from
+                .contains(&"ps".to_string())
+        );
     }
 
     #[test]
@@ -339,7 +381,11 @@ mod tests {
         let report = analyze_results(&results);
         assert_eq!(report.hidden_processes.len(), 1);
         assert_eq!(report.hidden_processes[0].pid, 5555);
-        assert!(report.hidden_processes[0].description.contains("Userland utility hijack"));
+        assert!(
+            report.hidden_processes[0]
+                .description
+                .contains("Userland utility hijack")
+        );
     }
 
     #[test]
@@ -359,6 +405,10 @@ mod tests {
         assert_eq!(report.hidden_processes.len(), 1);
         assert_eq!(report.hidden_processes[0].pid, 9999);
         assert_eq!(report.hidden_processes[0].name, "backdoor");
-        assert!(report.hidden_processes[0].description.contains("Sophisticated kernel rootkit"));
+        assert!(
+            report.hidden_processes[0]
+                .description
+                .contains("Sophisticated kernel rootkit")
+        );
     }
 }

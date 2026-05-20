@@ -1,12 +1,15 @@
-use std::collections::HashMap;
 use libc;
+use std::collections::HashMap;
 
 /// Query the Linux Kernel Module via custom Netlink socket
 pub fn query_lkm() -> Result<HashMap<i32, String>, String> {
     unsafe {
         let fd = libc::socket(libc::AF_NETLINK, libc::SOCK_RAW, 31);
         if fd < 0 {
-            return Err(format!("Failed to open netlink socket: {}", std::io::Error::last_os_error()));
+            return Err(format!(
+                "Failed to open netlink socket: {}",
+                std::io::Error::last_os_error()
+            ));
         }
 
         // Bind socket
@@ -22,7 +25,10 @@ pub fn query_lkm() -> Result<HashMap<i32, String>, String> {
         );
         if res < 0 {
             libc::close(fd);
-            return Err(format!("Failed to bind netlink socket: {}", std::io::Error::last_os_error()));
+            return Err(format!(
+                "Failed to bind netlink socket: {}",
+                std::io::Error::last_os_error()
+            ));
         }
 
         // Send request
@@ -48,7 +54,10 @@ pub fn query_lkm() -> Result<HashMap<i32, String>, String> {
 
         if res < 0 {
             libc::close(fd);
-            return Err(format!("Failed to send netlink request: {}", std::io::Error::last_os_error()));
+            return Err(format!(
+                "Failed to send netlink request: {}",
+                std::io::Error::last_os_error()
+            ));
         }
 
         // Receive loop
@@ -64,7 +73,10 @@ pub fn query_lkm() -> Result<HashMap<i32, String>, String> {
             );
             if res < 0 {
                 libc::close(fd);
-                return Err(format!("Failed to receive netlink response: {}", std::io::Error::last_os_error()));
+                return Err(format!(
+                    "Failed to receive netlink response: {}",
+                    std::io::Error::last_os_error()
+                ));
             }
 
             let received_len = res as usize;

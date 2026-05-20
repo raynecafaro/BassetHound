@@ -1,6 +1,6 @@
+use libbpf_rs::ObjectBuilder;
 use std::collections::HashMap;
 use std::io::Read;
-use libbpf_rs::ObjectBuilder;
 
 // Include the compiled BPF bytecode (copied to OUT_DIR by build.rs)
 const BPF_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/basset_hound.bpf.o"));
@@ -15,13 +15,16 @@ pub fn query_ebpf() -> Result<HashMap<i32, String>, String> {
         .open_memory("basset_hound_bpf", BPF_BYTES)
         .map_err(|e| format!("Failed to open BPF object from memory: {}", e))?;
 
-    let mut loaded = obj.load()
+    let mut loaded = obj
+        .load()
         .map_err(|e| format!("Failed to load BPF program into kernel: {}", e))?;
 
-    let prog = loaded.prog_mut("dump_task")
+    let prog = loaded
+        .prog_mut("dump_task")
         .ok_or_else(|| "BPF program 'dump_task' not found in object".to_string())?;
 
-    let link = prog.attach()
+    let link = prog
+        .attach()
         .map_err(|e| format!("Failed to attach BPF task iterator link: {}", e))?;
 
     let mut iter = libbpf_rs::Iter::new(&link)

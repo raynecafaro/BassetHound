@@ -1,5 +1,5 @@
-use std::process::Command;
 use std::path::PathBuf;
+use std::process::Command;
 
 /// Helper to get the path of the compiled basset_hound binary
 fn get_binary_path() -> PathBuf {

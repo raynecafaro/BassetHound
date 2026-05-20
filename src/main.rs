@@ -1,11 +1,11 @@
+use clap::Parser;
 use std::collections::HashSet;
 use std::process::exit;
-use clap::Parser;
 
-mod procfs;
 mod detector;
-mod lkm;
 mod ebpf;
+mod lkm;
+mod procfs;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "BassetHound - Modernized Hidden Process Detector", long_about = None)]
@@ -17,7 +17,6 @@ struct Args {
     /// Enable eBPF task iterator check
     #[arg(short = 'e', long)]
     use_ebpf: bool,
-
 
     /// Maximum PID to scan during brute-force search (defaults to /proc/sys/kernel/pid_max)
     #[arg(short = 'p', long)]
@@ -35,8 +34,12 @@ fn main() {
     let is_root = nix::unistd::getuid().is_root();
     if !is_root {
         println!("\x1b[1;33mWARNING: BassetHound is not running as root.\x1b[0m");
-        println!("Some checks (like eBPF loading, LKM communication, and certain direct process queries)");
-        println!("require root privileges. It is highly recommended to run this utility via sudo.\n");
+        println!(
+            "Some checks (like eBPF loading, LKM communication, and certain direct process queries)"
+        );
+        println!(
+            "require root privileges. It is highly recommended to run this utility via sudo.\n"
+        );
     }
 
     println!("\x1b[1;36m====================================================\x1b[0m");
@@ -89,8 +92,14 @@ fn main() {
         }
     }
     println!("OK");
-    println!("  - Syscall brute force: found {} active PIDs", syscall_pids.len());
-    println!("  - Direct ProcFS probe: found {} active PIDs", direct_pids.len());
+    println!(
+        "  - Syscall brute force: found {} active PIDs",
+        syscall_pids.len()
+    );
+    println!(
+        "  - Direct ProcFS probe: found {} active PIDs",
+        direct_pids.len()
+    );
 
     results.syscalls = syscall_pids;
     results.proc_direct = direct_pids;
@@ -128,8 +137,13 @@ fn main() {
     let report = detector::analyze_results(&results);
 
     if report.hidden_processes.is_empty() {
-        println!("\n\x1b[1;32m[✓] SUCCESS: No hidden processes or rootkit signatures detected.\x1b[0m");
-        println!("Total unique processes scanned across all interfaces: {}", report.total_scanned);
+        println!(
+            "\n\x1b[1;32m[✓] SUCCESS: No hidden processes or rootkit signatures detected.\x1b[0m"
+        );
+        println!(
+            "Total unique processes scanned across all interfaces: {}",
+            report.total_scanned
+        );
     } else {
         println!(
             "\n\x1b[1;31m[!] WARNING: Detected {} hidden process(es) / discrepancies!\x1b[0m",
@@ -138,10 +152,7 @@ fn main() {
         println!("\x1b[1;36m----------------------------------------------------\x1b[0m");
 
         for (i, proc) in report.hidden_processes.iter().enumerate() {
-            println!(
-                "\x1b[1;31mDiscrepancy #{}\x1b[0m",
-                i + 1
-            );
+            println!("\x1b[1;31mDiscrepancy #{}\x1b[0m", i + 1);
             println!("  PID          : {}", proc.pid);
             println!("  Name         : \x1b[1m{}\x1b[0m", proc.name);
             println!("  Detected By  : {:?}", proc.detected_by);
@@ -160,7 +171,9 @@ fn main() {
         }
 
         println!("\x1b[1;36m====================================================\x1b[0m");
-        println!("\x1b[1;31mALERT: Hidden processes are a strong indicator of rootkit or malware activity.\x1b[0m");
+        println!(
+            "\x1b[1;31mALERT: Hidden processes are a strong indicator of rootkit or malware activity.\x1b[0m"
+        );
         exit(1);
     }
 
@@ -170,7 +183,11 @@ fn main() {
         let mut sorted_pids: Vec<&i32> = results.proc_readdir.iter().collect();
         sorted_pids.sort();
         for &pid in sorted_pids {
-            let name = results.ps_cmds.get(&pid).cloned().unwrap_or_else(|| "unknown".to_string());
+            let name = results
+                .ps_cmds
+                .get(&pid)
+                .cloned()
+                .unwrap_or_else(|| "unknown".to_string());
             println!("  [{}] {}", pid, name);
         }
     }
@@ -179,7 +196,10 @@ fn main() {
 fn print_audit_item(name: &str, result: &Result<bool, String>) {
     match result {
         Ok(true) => println!("    - {:<20}: \x1b[1;32mVISIBLE\x1b[0m", name),
-        Ok(false) => println!("    - {:<20}: \x1b[1;31mHIDDEN\x1b[0m (Returned false)", name),
+        Ok(false) => println!(
+            "    - {:<20}: \x1b[1;31mHIDDEN\x1b[0m (Returned false)",
+            name
+        ),
         Err(e) => println!("    - {:<20}: \x1b[1;31mHIDDEN\x1b[0m ({})", name, e),
     }
 }
