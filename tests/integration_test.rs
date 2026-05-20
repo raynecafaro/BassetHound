@@ -61,7 +61,13 @@ fn test_lkm_mode_execution() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Querying Linux Kernel Module via Netlink..."));
-    assert!(stdout.contains("Running discrepancy analysis"));
+    if std::env::var("CI").is_ok() || std::env::var("RUN_REAL_TESTS").is_ok() {
+        assert!(
+            stdout.contains("Querying Linux Kernel Module via Netlink... OK ("),
+            "LKM query failed. Stdout:\n{}",
+            stdout
+        );
+    }
 }
 
 #[test]
@@ -78,7 +84,13 @@ fn test_ebpf_mode_execution() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Querying eBPF task iterator..."));
-    assert!(stdout.contains("Running discrepancy analysis"));
+    if std::env::var("CI").is_ok() || std::env::var("RUN_REAL_TESTS").is_ok() {
+        assert!(
+            stdout.contains("Querying eBPF task iterator... OK ("),
+            "eBPF query failed. Stdout:\n{}",
+            stdout
+        );
+    }
 }
 
 #[test]
@@ -97,5 +109,16 @@ fn test_combined_mode_execution() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Querying Linux Kernel Module via Netlink..."));
     assert!(stdout.contains("Querying eBPF task iterator..."));
-    assert!(stdout.contains("Running discrepancy analysis"));
+    if std::env::var("CI").is_ok() || std::env::var("RUN_REAL_TESTS").is_ok() {
+        assert!(
+            stdout.contains("Querying Linux Kernel Module via Netlink... OK ("),
+            "LKM query failed. Stdout:\n{}",
+            stdout
+        );
+        assert!(
+            stdout.contains("Querying eBPF task iterator... OK ("),
+            "eBPF query failed. Stdout:\n{}",
+            stdout
+        );
+    }
 }

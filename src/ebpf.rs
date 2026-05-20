@@ -20,7 +20,8 @@ pub fn query_ebpf() -> Result<HashMap<i32, String>, String> {
         .map_err(|e| format!("Failed to load BPF program into kernel: {}", e))?;
 
     let prog = loaded
-        .prog_mut("dump_task")
+        .progs_mut()
+        .find(|p| p.name() == "dump_task")
         .ok_or_else(|| "BPF program 'dump_task' not found in object".to_string())?;
 
     let link = prog

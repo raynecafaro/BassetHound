@@ -11,10 +11,10 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────
-  # Rust userland: build, test, lint, format
+  # Unified Build & Test Pipeline
   # ─────────────────────────────────────────────
-  rust:
-    name: Rust Build & Test
+  build_and_test:
+    name: Build & Test Suite
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,8 +27,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libelf-dev zlib1g-dev
-
+          sudo apt-get install -y libelf-dev zlib1g-dev build-essential clang llvm libbpf-dev
 
       - name: Cache cargo registry & build
         uses: actions/cache@v4
@@ -40,61 +39,17 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      # Create a dummy BPF object so build.rs succeeds without bpftool
-      - name: Create dummy BPF object for build
-        run: mkdir -p bpf && touch bpf/basset_hound.bpf.o
-
-      - name: Check formatting
-        run: cargo fmt --check
-
-      - name: Build
-        run: cargo build --release
-
-      - name: Run clippy
-        run: cargo clippy -- -D warnings
-
-      - name: Run tests
-        run: cargo test
-
-  # ─────────────────────────────────────────────
-  # LKM: compile the kernel module
-  # ─────────────────────────────────────────────
-  lkm:
-    name: LKM Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install kernel headers
+      - name: Install bpftool (static)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential
-          # Only install headers if they are not already pre-installed on the runner
-          if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
-            sudo apt-get install -y linux-headers-$(uname -r) || sudo apt-get install -y linux-headers-azure || true
-          fi
-
-      - name: Build kernel module
-        run: make lkm
-
-  # ─────────────────────────────────────────────
-  # eBPF: compile BPF bytecode
-  # ─────────────────────────────────────────────
-  ebpf:
-    name: eBPF Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install eBPF build dependencies
-        run: |
-          sudo apt-get update
-          # Install clang, llvm, and libbpf-dev
-          sudo apt-get install -y clang llvm libbpf-dev
-          # Download official static bpftool binary to avoid kernel package matching issues
           curl -sSL https://github.com/libbpf/bpftool/releases/download/v7.4.0/bpftool-v7.4.0-amd64.tar.gz | tar -xz -C /tmp
           sudo mv /tmp/bpftool /usr/local/bin/bpftool
           sudo chmod +x /usr/local/bin/bpftool
+
+      - name: Install kernel headers
+        run: |
+          if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
+            sudo apt-get install -y linux-headers-$(uname -r) || sudo apt-get install -y linux-headers-azure || true
+          fi
 
       - name: Generate vmlinux.h
         run: |
@@ -103,6 +58,27 @@ jobs:
 
       - name: Compile eBPF program
         run: clang -g -O2 -target bpf -I bpf/ -c bpf/basset_hound.bpf.c -o bpf/basset_hound.bpf.o
+
+      - name: Build kernel module
+        run: make lkm
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Build Rust binary
+        run: cargo build --release
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests with loaded kernel module and eBPF
+        run: |
+          # Load the compiled kernel module
+          sudo insmod basset_hound_module.ko
+          # Run tests under sudo to allow eBPF loading and LKM netlink queries
+          sudo env "PATH=$PATH" CI=true cargo test
+          # Unload the module
+          sudo rmmod basset_hound_module
 
   # ─────────────────────────────────────────────
   # Security: audit dependencies for known CVEs

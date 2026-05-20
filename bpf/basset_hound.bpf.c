@@ -14,7 +14,7 @@ int dump_task(struct bpf_iter__task *ctx)
         return 0;
 
     /* Print PID (tgid) and command name separated by tab */
-    bpf_seq_printf(seq, "%d\t%s\n", task->tgid, task->comm);
+    BPF_SEQ_PRINTF(seq, "%d\t%s\n", task->tgid, task->comm);
 
     return 0;
 }
