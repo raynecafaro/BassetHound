@@ -1,5 +1,4 @@
 use nix::errno::Errno;
-use nix::sched::sched_getscheduler;
 use nix::sys::signal::kill;
 use nix::unistd::Pid;
 use nix::unistd::{getpgid, getsid};
@@ -36,12 +35,14 @@ pub fn probe_pid_syscalls(pid: i32) -> bool {
     }
 
     // 4. sched_getscheduler(pid) - Get scheduler policy
-    {
-        match sched_getscheduler(target_pid) {
-            Ok(_) => return true,
-            Err(Errno::EPERM) => return true,
-            Err(Errno::ESRCH) => {}
-            Err(_) => {}
+    unsafe {
+        let res = libc::sched_getscheduler(pid);
+        if res >= 0 {
+            return true;
+        }
+        let err = Errno::last();
+        if err == Errno::EPERM {
+            return true;
         }
     }
 
@@ -138,10 +139,18 @@ pub fn audit_process(pid: i32) -> SyscallAuditReport {
     };
 
     // 4. sched_getscheduler
-    let sched_res = match sched_getscheduler(target_pid) {
-        Ok(_) => Ok(true),
-        Err(Errno::EPERM) => Ok(true),
-        Err(e) => Err(e.to_string()),
+    let sched_res = unsafe {
+        let res = libc::sched_getscheduler(pid);
+        if res >= 0 {
+            Ok(true)
+        } else {
+            let err = Errno::last();
+            if err == Errno::EPERM {
+                Ok(true)
+            } else {
+                Err(err.to_string())
+            }
+        }
     };
 
     // 5. stat /proc/<pid>

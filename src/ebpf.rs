@@ -12,7 +12,7 @@ pub fn query_ebpf() -> Result<HashMap<i32, String>, String> {
     }
 
     let obj = ObjectBuilder::default()
-        .open_memory("basset_hound_bpf", BPF_BYTES)
+        .open_memory(BPF_BYTES)
         .map_err(|e| format!("Failed to open BPF object from memory: {}", e))?;
 
     let mut loaded = obj

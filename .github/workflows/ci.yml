@@ -69,8 +69,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential
-          # Attempt to install headers for the running kernel, with fallback to the Azure meta-package
-          sudo apt-get install -y linux-headers-$(uname -r) || sudo apt-get install -y linux-headers-azure || true
+          # Only install headers if they are not already pre-installed on the runner
+          if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
+            sudo apt-get install -y linux-headers-$(uname -r) || sudo apt-get install -y linux-headers-azure || true
+          fi
 
       - name: Build kernel module
         run: make lkm
@@ -87,25 +89,17 @@ jobs:
       - name: Install eBPF build dependencies
         run: |
           sudo apt-get update
-          # Install clang, llvm, libbpf-dev, and standalone bpftool package
-          sudo apt-get install -y clang llvm libbpf-dev bpftool
+          # Install clang, llvm, and libbpf-dev
+          sudo apt-get install -y clang llvm libbpf-dev
+          # Download official static bpftool binary to avoid kernel package matching issues
+          curl -sSL https://github.com/libbpf/bpftool/releases/download/v7.4.0/bpftool-v7.4.0-amd64.tar.gz | tar -xz -C /tmp
+          sudo mv /tmp/bpftool /usr/local/bin/bpftool
+          sudo chmod +x /usr/local/bin/bpftool
 
       - name: Generate vmlinux.h
         run: |
           mkdir -p bpf
-          # Check PATH first, then linux-tools fallback path
-          if command -v bpftool &>/dev/null; then
-            BPFTOOL=bpftool
-          elif [ -x "/usr/lib/linux-tools/$(uname -r)/bpftool" ]; then
-            BPFTOOL="/usr/lib/linux-tools/$(uname -r)/bpftool"
-          else
-            # Try to locate any other bpftool binary
-            BPFTOOL=$(find /usr -name bpftool -type f -executable -print -quit 2>/dev/null || echo "")
-            if [ -z "$BPFTOOL" ]; then
-              echo "Error: bpftool not found" && exit 1
-            fi
-          fi
-          sudo $BPFTOOL btf dump file /sys/kernel/btf/vmlinux format c > bpf/vmlinux.h
+          sudo bpftool btf dump file /sys/kernel/btf/vmlinux format c > bpf/vmlinux.h
 
       - name: Compile eBPF program
         run: clang -g -O2 -target bpf -I bpf/ -c bpf/basset_hound.bpf.c -o bpf/basset_hound.bpf.o
