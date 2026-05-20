@@ -9,6 +9,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CC_x86_64_unknown_linux_musl: musl-gcc
+  LIBRARY_PATH: /tmp/musl-argp/lib
+  C_INCLUDE_PATH: /tmp/musl-argp/include
 
 jobs:
   # ─────────────────────────────────────────────
@@ -29,7 +31,18 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libelf-dev zlib1g-dev build-essential clang llvm libbpf-dev musl-tools musl-dev autopoint autoconf flex bison
+          sudo apt-get install -y libelf-dev zlib1g-dev build-essential clang llvm libbpf-dev musl-tools musl-dev autopoint autoconf flex bison libtool
+
+      - name: Build argp-standalone for musl
+        run: |
+          git clone --depth=1 https://github.com/ericonr/argp-standalone.git /tmp/argp-standalone
+          cd /tmp/argp-standalone
+          autoreconf -fi
+          CC=musl-gcc ./configure --host=x86_64-linux-musl --prefix=/tmp/musl-argp
+          make -j$(nproc)
+          mkdir -p /tmp/musl-argp/lib /tmp/musl-argp/include
+          cp libargp.a /tmp/musl-argp/lib/
+          cp argp.h /tmp/musl-argp/include/
 
       - name: Cache cargo registry & build
         uses: actions/cache@v4
